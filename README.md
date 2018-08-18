@@ -8,7 +8,7 @@ The first versions may be hardcoded to convert a single input file, and hardcode
 
 Note:
 PowerShell doesn't seem to keep the JSON order as it processes objects.
-- this is corrected, `get-member -type NoteProperty` was reording based on property name. Now using pdobject.Properties.
+- this is corrected, `get-member -type NoteProperty` was reording based on property name. Now using psobject.Properties.
 
 HtmlEncode was used, so a variety of characters have been escaped.
 
