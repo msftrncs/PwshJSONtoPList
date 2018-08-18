@@ -17,7 +17,8 @@ function make-plist ($name, $item, [bool]$isArray, [string]$indent) {
             # handle an array of objects
             foreach ($subitem in $item) {
                 "$indent`t<dict>"
-                $subitem | Get-Member -type noteproperty | ForEach-Object { make-plist $_.Name $(Invoke-Expression "`$subitem.$($_.Name)") $(Invoke-Expression "`$subitem.$($_.Name) -is [array]") "$indent`t`t" }
+                #$subitem | Get-Member -type noteproperty | ForEach-Object { make-plist $_.Name $(Invoke-Expression "`$subitem.$($_.Name)") $(Invoke-Expression "`$subitem.$($_.Name) -is [array]") "$indent`t`t" }
+                foreach ($property in $subitem.psobject.properties) {make-plist $property.Name $(Invoke-Expression "`$subitem.$($property.Name)") $(Invoke-Expression "`$subitem.$($property.Name) -is [array]") "$indent`t`t" }
                 "$indent`t</dict>"
             }
         }
@@ -26,7 +27,7 @@ function make-plist ($name, $item, [bool]$isArray, [string]$indent) {
     elseif ($item -is [System.Management.Automation.PSCustomObject]) {
         # handle non array objects
         "$indent<dict>"
-        $item | Get-Member -type noteproperty | ForEach-Object { make-plist $_.Name $(Invoke-Expression "`$item.$($_.Name)") $(Invoke-Expression "`$item.$($_.Name) -is [array]") "$indent`t" }
+        foreach ($property in $item.psobject.properties) {make-plist $property.Name $(Invoke-Expression "`$item.$($property.Name)") $(Invoke-Expression "`$item.$($property.Name) -is [array]") "$indent`t" }
         "$indent</dict>"
     }
     elseif ($item -is [string] ) {
@@ -47,7 +48,7 @@ $FirstLevelObjects = @(
 # start by reading in the file through ConvertFrom-JSON
 $grammer_json = Get-Content powershell.tmlanguage.json | ConvertFrom-Json
 
-# write the PLIST header out
+# write the PList header out
 '<?xml version="1.0" encoding="UTF-8"?>'
 '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
 '<plist version="1.0">'
@@ -57,6 +58,18 @@ $grammer_json = Get-Content powershell.tmlanguage.json | ConvertFrom-Json
 make-plist "fileTypes" ([string[]]$('ps1', 'psm1', 'psd1')) $true "`t"
 
 # only pass the first items if they match 'name', 'patterns', or 'repository', the items will recurse.
-$grammer_json | Get-Member -type noteproperty | Where-Object Name -in $FirstLevelObjects | ForEach-Object { make-plist $_.Name $(Invoke-Expression "`$grammer_json.$($_.Name)") $(Invoke-Expression "`$grammer_json.$($_.Name) -is [array]") "`t" }
+#$grammer_json | Get-Member -type noteproperty | Where-Object Name -in $FirstLevelObjects | ForEach-Object { make-plist $_.Name $(Invoke-Expression "`$grammer_json.$($_.Name)") $(Invoke-Expression "`$grammer_json.$($_.Name) -is [array]") "`t" }
+
+foreach ($property in $grammer_json.psobject.properties) {if ($property.Name -in $FirstLevelObjects) {make-plist $property.Name $(Invoke-Expression "`$grammer_json.$($property.Name)") $(Invoke-Expression "`$grammer_json.$($property.name) -is [array]") "`t" } }
+
+# add the 'scopeName' property at the end
+make-plist $grammer_json.psobject.properties["scopeName"].Name $grammer_json.psobject.properties["scopeName"].Value $false "`t"
+
+# add the ?PowerShell? 'uuid'
+make-plist "uuid" "f8f5ffb0-503e-11df-9879-0800200c9a66" $false "`t"
+
+#end the first level, then end the PList document
+"</dict>"
+"</plist>"
 
 # the PList file has now been written to stdout
