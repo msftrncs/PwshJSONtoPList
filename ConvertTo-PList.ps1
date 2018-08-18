@@ -1,6 +1,6 @@
 # attempt to convert a JSON textmate language file back to PLIST tmLanguage file
 
-function make-plist ($name, $item, [bool]$isArray, [string]$indent) {
+function make-plist ([string]$name, $item, [bool]$isArray, [string]$indent) {
     # recursively break down the objects based on their type
     # single item array types get converted to non array types when passed, so this information has to be tracked via $isArray
     "$indent<key>$([System.Web.HttpUtility]::HtmlEncode($name))</key>"
@@ -17,7 +17,9 @@ function make-plist ($name, $item, [bool]$isArray, [string]$indent) {
             # handle an array of objects
             foreach ($subitem in $item) {
                 "$indent`t<dict>"
-                foreach ($property in $subitem.psobject.properties) {make-plist $property.Name $(Invoke-Expression "`$subitem.$($property.Name)") $(Invoke-Expression "`$subitem.$($property.Name) -is [array]") "$indent`t`t" }
+                foreach ($property in $subitem.psobject.properties) {
+                    make-plist $property.Name $property.Value ($property.Value -is [array]) "$indent`t`t" 
+                }
                 "$indent`t</dict>"
             }
         }
@@ -26,7 +28,9 @@ function make-plist ($name, $item, [bool]$isArray, [string]$indent) {
     elseif ($item -is [System.Management.Automation.PSCustomObject]) {
         # handle non array objects
         "$indent<dict>"
-        foreach ($property in $item.psobject.properties) {make-plist $property.Name $(Invoke-Expression "`$item.$($property.Name)") $(Invoke-Expression "`$item.$($property.Name) -is [array]") "$indent`t" }
+        foreach ($property in $item.psobject.properties) {
+            make-plist $property.Name $property.Value ($property.Value -is [array]) "$indent`t" 
+        }
         "$indent</dict>"
     }
     elseif ($item -is [string] ) {
@@ -60,8 +64,8 @@ make-plist "fileTypes" ([string[]]$('ps1', 'psm1', 'psd1')) $true "`t"
 
 # only pass the first items if they match 'name', 'patterns', or 'repository', 'scopeName' (and in that order), the items will then recurse.
 foreach ($key in $FirstLevelObjects) {
-    if ($grammer_json.psobject.properties[$key]) {
-        make-plist $grammer_json.psobject.properties[$key].Name $(Invoke-Expression "`$grammer_json.$($grammer_json.psobject.properties[$key].Name)") $(Invoke-Expression "`$grammer_json.$($grammer_json.psobject.properties[$key].Name) -is [array]") "`t" 
+    if ($grammer_json.psobject.Properties[$key]) {
+        make-plist $grammer_json.psobject.Properties[$key].Name $grammer_json.psobject.Properties[$key].Value ($grammer_json.psobject.Properties[$key].Value -is [array]) "`t" 
     }
 }
 
