@@ -1,79 +1,85 @@
 # attempt to convert a JSON textmate language file back to PLIST tmLanguage file
 
-function make-plist ([string]$name, $item, [bool]$isArray, [string]$indent) {
-    # recursively break down the objects based on their type
-    # single item array types get converted to non array types when passed, so this information has to be tracked via $isArray
-    "$indent<key>$([System.Web.HttpUtility]::HtmlEncode($name))</key>"
-    if ($isArray) {
-        # handle most arrays or items that should have been arrays
-        "$indent<array>"
-        if ($item -is [string[]]) {
-            # handle arrays of strings
-            foreach ($subitem in $item) {
-                "$indent`t<string>$([System.Web.HttpUtility]::HtmlEncode($subitem))</string>"
+#define a function to create a plist document, trying to keep it as generic as possible
+function ConvertTo-PList ($PropertyList ) {
+    #write out a PList document based on the property list supplied
+
+    function writeXMLcontent ([string]$value) {
+        # write an escaped XML value
+        # the intention of making this a function, is a single place to change the encoding function used
+        [System.Security.SecurityElement]::escape($value)
+    }
+
+    function writeproperty ([string]$name, $item, [string]$indent) {
+        # writing the property may require recursively breaking down the objects based on their type
+        # name of the property is option, but that is only intended for the first property object
+
+        function writevalue ($item, [string]$indent) {
+            # write a property value, recurse non-string type objects back to writekey
+
+            if ($item -is [string] ) {
+                # handle strings
+                "$indent<string>$(writeXMLcontent($item))</string>"
             }
+            else {
+                # handle objects by recursing with writeproperty
+                "$indent<dict>"
+                foreach ($property in ([PSCustomObject]$item).psobject.Properties) {
+                    writeproperty $property.Name $property.Value "$indent`t"
+                }
+                "$indent</dict>"
+            }
+        }
+
+        # write out key name, if one was supplied
+        if ($name) {
+            "$indent<key>$(writeXMLcontent($name))</key>"
+        }
+        if ($item -is [array]) {
+            # handle arrays
+            "$indent<array>"
+            foreach ($subitem in $item) {
+                writevalue $subitem "$indent`t"
+            }
+            "$indent</array>"
         }
         else {
-            # handle an array of objects
-            foreach ($subitem in $item) {
-                "$indent`t<dict>"
-                foreach ($property in $subitem.psobject.properties) {
-                    make-plist $property.Name $property.Value ($property.Value -is [array]) "$indent`t`t" 
-                }
-                "$indent`t</dict>"
-            }
+            Writevalue $item $indent
         }
-        "$indent</array>"
     }
-    elseif ($item -is [System.Management.Automation.PSCustomObject]) {
-        # handle non array objects
-        "$indent<dict>"
-        foreach ($property in $item.psobject.properties) {
-            make-plist $property.Name $property.Value ($property.Value -is [array]) "$indent`t" 
-        }
-        "$indent</dict>"
-    }
-    elseif ($item -is [string] ) {
-        # handle non array strings
-        "$indent<string>$([System.Web.HttpUtility]::HtmlEncode($item))</string>"
-    }
-    else {
-        throw "unhandled type $($item.gettype().Name)"
-    }
+
+    # write the PList Header
+    '<?xml version="1.0" encoding="UTF-8"?>'
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+    '<plist version="1.0">'
+
+    # start writing the property list, the property list should be an object
+    writeproperty $null $PropertyList ""
+
+    # end the PList document
+    "</plist>"
 }
 
-# this lists out the first level of properties to create the PList document from, and also gives the output order of the first level.
+<# this lists out the first level of properties to create the PList document from, and also gives the output order of the first level.
 $FirstLevelObjects = @(
     'name'
     'patterns'
     'repository'
     'scopeName'
-)
+) #>
+
+# from here on, we're converting the PowerShell.tmLanguage.JSON file to PLIST with hardcoded conversion requirements
 
 # start by reading in the file through ConvertFrom-JSON
 $grammer_json = Get-Content powershell.tmlanguage.json | ConvertFrom-Json
 
-# write the PList header out
-'<?xml version="1.0" encoding="UTF-8"?>'
-'<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
-'<plist version="1.0">'
-"<dict>" #technically this is the begining of the first level
-
-# write out a fixed 'fileTypes' property.
-make-plist "fileTypes" ([string[]]$('ps1', 'psm1', 'psd1')) $true "`t"
-
-# only pass the first items if they match 'name', 'patterns', or 'repository', 'scopeName' (and in that order), the items will then recurse.
-foreach ($key in $FirstLevelObjects) {
-    if ($grammer_json.psobject.Properties[$key]) {
-        make-plist $grammer_json.psobject.Properties[$key].Name $grammer_json.psobject.Properties[$key].Value ($grammer_json.psobject.Properties[$key].Value -is [array]) "`t" 
-    }
-}
-
-# add the ?PowerShell? 'uuid'
-make-plist "uuid" "f8f5ffb0-503e-11df-9879-0800200c9a66" $false "`t"
-
-#end the first level, then end the PList document
-"</dict>"
-"</plist>"
-
-# the PList file has now been written to stdout
+# write the PList document from a custom made object, supplying some data missing from the JSON file, ignoring some JSON objects
+# and reordering the items that remain.
+ConvertTo-Plist ([ordered]@{
+    'fileTypes'=([string[]]$('ps1', 'psm1', 'psd1'))
+    $grammer_json.psobject.Properties['name'].Name=$grammer_json.psobject.Properties['name'].Value
+    $grammer_json.psobject.Properties['patterns'].Name=$grammer_json.psobject.Properties['patterns'].Value
+    $grammer_json.psobject.Properties['repository'].Name=$grammer_json.psobject.Properties['repository'].Value
+    $grammer_json.psobject.Properties['scopeName'].Name=$grammer_json.psobject.Properties['scopeName'].Value
+    'uuid'='f8f5ffb0-503e-11df-9879-0800200c9a66'
+})
