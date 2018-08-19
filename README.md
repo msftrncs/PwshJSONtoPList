@@ -1,15 +1,11 @@
 # PwshJSONtoPList
 
-Powershell function to convert JSON (or other PSObject) to PList.
+Powershell function to convert PowerShell.tmLanguage.JSON file to PList.
 
-Its intention is to convert tmLanguage language syntax files back to PList format after edited in JSON for VSCode.
+Within it is a fairly complete PList generator function.
 
-The first versions may be hardcoded to convert a single input file, and hardcoded with specific supporting constants.
+Its intention is to convert the VS Code PowerShell tmLanguage language syntax file back to PList format after edited as a JSON file.
 
 Note:
-PowerShell doesn't seem to keep the JSON order as it processes objects.
-- this is corrected, `get-member -type NoteProperty` was reording based on property name. Now using psobject.Properties.
-
-HtmlEncode was used, so a variety of characters have been escaped.
-
-Only string data format is supported, I am unaware if any other data types are needed.
+- SecurityElement.encode is used, so a variety of characters have been escaped.
+- Only string data values are supported by the PList converter, I am unaware if any other data types are needed.
