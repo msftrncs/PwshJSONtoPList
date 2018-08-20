@@ -1,5 +1,29 @@
 # attempt to convert a JSON textmate language file back to PLIST tmLanguage file
 
+# parameters to the script - needs work to support multiple paths  (WIP)
+[CmdletBinding()]
+Param(
+
+    # Specifies a path to one or more locations. Wildcards are permitted.
+    [Parameter(Mandatory = $true,
+        Position = 0,
+        ValueFromPipeline = $true,
+        ValueFromPipelineByPropertyName = $true,
+        HelpMessage = "Path to one or more locations.")]
+    [ValidateNotNullOrEmpty()]
+    [SupportsWildcards()]
+    [string[]]$Path,
+
+    [Parameter(Mandatory = $false,
+        Position = 1,
+        ValueFromPipeline = $false,
+        ValueFromPipelineByPropertyName = $false,
+        HelpMessage = "Indention pattern.")]
+    [ValidateNotNull()]
+    [string[]]$Indent = "`t"
+
+)
+
 # define a function to create a plist document, trying to keep it as generic as possible
 function ConvertTo-PList ($PropertyList, [string]$indent) {
     # write out a PList document based on the property list supplied
@@ -10,7 +34,7 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
     function writeXMLcontent ([string]$value) {
         # write an escaped XML value
         # the purpose of making this a function, is a single place to change the encoding function used
-        [System.Security.SecurityElement]::escape($value)
+        [System.Security.SecurityElement]::Escape($value)
     }
 
     function writeproperty ([string]$name, $item, [string]$level) {
@@ -63,7 +87,7 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
     writeproperty $null $PropertyList ""
 
     # end the PList document
-    "</plist>"
+    '</plist>'
 }
 
 <# this lists out the first level of properties to create the PList document from, and also gives the output order of the first level.
@@ -75,17 +99,19 @@ $FirstLevelObjects = @(
 ) #>
 
 # from here on, we're converting the PowerShell.tmLanguage.JSON file to PLIST with hardcoded conversion requirements
+foreach ($file in $Path) {
 
-# start by reading in the file through ConvertFrom-JSON
-$grammer_json = Get-Content powershell.tmLanguage.json | ConvertFrom-Json
+    # start by reading in the file through ConvertFrom-JSON
+    $grammer_json = Get-Content $file | ConvertFrom-Json
 
-# write the PList document from a custom made object, supplying some data missing from the JSON file, ignoring some JSON objects
-# and reordering the items that remain.
-ConvertTo-Plist ([ordered]@{
-        'fileTypes'                                          = ([string[]]$('ps1', 'psm1', 'psd1'))
-        $grammer_json.psobject.Properties['name'].Name       = $grammer_json.psobject.Properties['name'].Value
-        $grammer_json.psobject.Properties['patterns'].Name   = $grammer_json.psobject.Properties['patterns'].Value
-        $grammer_json.psobject.Properties['repository'].Name = $grammer_json.psobject.Properties['repository'].Value
-        $grammer_json.psobject.Properties['scopeName'].Name  = $grammer_json.psobject.Properties['scopeName'].Value
-        'uuid'                                               = 'f8f5ffb0-503e-11df-9879-0800200c9a66'
-    }) "`t"
+    # write the PList document from a custom made object, supplying some data missing from the JSON file, ignoring some JSON objects
+    # and reordering the items that remain.
+    ConvertTo-Plist ([ordered]@{
+            'fileTypes'                                          = ([string[]]$('ps1', 'psm1', 'psd1'))
+            $grammer_json.psobject.Properties['name'].Name       = $grammer_json.psobject.Properties['name'].Value
+            $grammer_json.psobject.Properties['patterns'].Name   = $grammer_json.psobject.Properties['patterns'].Value
+            $grammer_json.psobject.Properties['repository'].Name = $grammer_json.psobject.Properties['repository'].Value
+            $grammer_json.psobject.Properties['scopeName'].Name  = $grammer_json.psobject.Properties['scopeName'].Value
+            'uuid'                                               = 'f8f5ffb0-503e-11df-9879-0800200c9a66'
+        }) $Indent
+}
