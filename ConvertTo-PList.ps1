@@ -44,9 +44,37 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
         function writevalue ($item, [string]$level) {
             # write a property value, recurse non-string type objects back to writeproperty
 
-            if ($item -is [string]) {
-                # handle strings
+            if (($item -is [string]) -or ($item -is [char])) {
+                # handle strings or characters
                 "$level<string>$(writeXMLcontent($item))</string>"
+            }
+            elseif ($item -is [boolean]) {
+                # handle boolean type
+                "$level$(
+                    if ($item) {
+                        "<true/>"
+                    }
+                    else {
+                        "<false/>"
+                    }
+                )"
+            }
+            elseif ($item -is [ValueType]) {
+                # handle numeric types
+                "$level$(
+                    if (($item -is [single]) -or ($item -is [double])) {
+                        # floating point numeric types
+                        "<real>$item</real>"
+                    }
+                    elseif ($item -is [datetime]) {
+                        # date and time numeric type
+                        "<date>$(writeXMLcontent($item))</date>"
+                    }
+                    else {
+                        # interger numberic types
+                        "<integer>$item</integer>"
+                    }
+                )"
             }
             else {
                 # handle objects by recursing with writeproperty
