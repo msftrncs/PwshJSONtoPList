@@ -1,52 +1,56 @@
 # attempt to convert a JSON textmate language file back to PLIST tmLanguage file
 
 # define a function to create a plist document, trying to keep it as generic as possible
-function ConvertTo-PList ($PropertyList) {
+function ConvertTo-PList ($PropertyList, [string]$indent) {
     # write out a PList document based on the property list supplied
+    # $PropertyList is an object containing the entire property list tree.  Hash tables are supported.
+    # $indent is a string representing the indentation to use.
+    #   Typically use "`t" or "  ".
 
     function writeXMLcontent ([string]$value) {
         # write an escaped XML value
-        # the intention of making this a function, is a single place to change the encoding function used
+        # the purpose of making this a function, is a single place to change the encoding function used
         [System.Security.SecurityElement]::escape($value)
     }
 
-    function writeproperty ([string]$name, $item, [string]$indent) {
+    function writeproperty ([string]$name, $item, [string]$level) {
         # writing the property may require recursively breaking down the objects based on their type
-        # name of the property is option, but that is only intended for the first property object
+        # name of the property is optional, but that is only intended for the first property object
 
-        function writevalue ($item, [string]$indent) {
+        function writevalue ($item, [string]$level) {
             # write a property value, recurse non-string type objects back to writeproperty
 
             if ($item -is [string]) {
                 # handle strings
-                "$indent<string>$(writeXMLcontent($item))</string>"
+                "$level<string>$(writeXMLcontent($item))</string>"
             }
             else {
                 # handle objects by recursing with writeproperty
-                "$indent<dict>"
+                "$level<dict>"
                 # iterate through the items (force to a PSCustomObject for consistency)
                 foreach ($property in ([PSCustomObject]$item).psobject.Properties) {
-                    writeproperty $property.Name $property.Value "$indent`t"
+                    writeproperty $property.Name $property.Value "$level$indent"
                 }
-                "$indent</dict>"
+                "$level</dict>"
             }
         }
 
         # write out key name, if one was supplied
         if ($name) {
-            "$indent<key>$(writeXMLcontent($name))</key>"
+            "$level<key>$(writeXMLcontent($name))</key>"
         }
         if ($item -is [array]) {
             # handle arrays
-            "$indent<array>"
+            "$level<array>"
             # iterate through the items in the array
             foreach ($subitem in $item) {
-                writevalue $subitem "$indent`t"
+                writevalue $subitem "$level$indent"
             }
-            "$indent</array>"
+            "$level</array>"
         }
         else {
-            Writevalue $item $indent
+            # handle a single object
+            Writevalue $item $level
         }
     }
 
@@ -55,7 +59,7 @@ function ConvertTo-PList ($PropertyList) {
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
     '<plist version="1.0">'
 
-    # start writing the property list, the property list should be an object, has no name
+    # start writing the property list, the property list should be an object, has no name, and starts at base level
     writeproperty $null $PropertyList ""
 
     # end the PList document
@@ -73,7 +77,7 @@ $FirstLevelObjects = @(
 # from here on, we're converting the PowerShell.tmLanguage.JSON file to PLIST with hardcoded conversion requirements
 
 # start by reading in the file through ConvertFrom-JSON
-$grammer_json = Get-Content powershell.tmlanguage.json | ConvertFrom-Json
+$grammer_json = Get-Content powershell.tmLanguage.json | ConvertFrom-Json
 
 # write the PList document from a custom made object, supplying some data missing from the JSON file, ignoring some JSON objects
 # and reordering the items that remain.
@@ -84,4 +88,4 @@ ConvertTo-Plist ([ordered]@{
         $grammer_json.psobject.Properties['repository'].Name = $grammer_json.psobject.Properties['repository'].Value
         $grammer_json.psobject.Properties['scopeName'].Name  = $grammer_json.psobject.Properties['scopeName'].Value
         'uuid'                                               = 'f8f5ffb0-503e-11df-9879-0800200c9a66'
-    })
+    }) "`t"
