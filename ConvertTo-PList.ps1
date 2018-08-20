@@ -24,6 +24,7 @@ function ConvertTo-PList ($PropertyList) {
             else {
                 # handle objects by recursing with writeproperty
                 "$indent<dict>"
+                # itterate through the items (force to a PSCustomObject for consistency)
                 foreach ($property in ([PSCustomObject]$item).psobject.Properties) {
                     writeproperty $property.Name $property.Value "$indent`t"
                 }
@@ -38,6 +39,7 @@ function ConvertTo-PList ($PropertyList) {
         if ($item -is [array]) {
             # handle arrays
             "$indent<array>"
+            # itterate through the items in the array
             foreach ($subitem in $item) {
                 writevalue $subitem "$indent`t"
             }
