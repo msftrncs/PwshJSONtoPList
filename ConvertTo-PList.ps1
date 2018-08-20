@@ -62,8 +62,8 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
             elseif ($item -is [ValueType]) {
                 # handle numeric types
                 "$level$(
-                    if (($item -is [single]) -or ($item -is [double])) {
-                        # floating point numeric types
+                    if (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
+                        # floating point or decimal numeric types
                         "<real>$item</real>"
                     }
                     elseif ($item -is [datetime]) {
@@ -71,7 +71,7 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
                         "<date>$(writeXMLcontent($item))</date>"
                     }
                     else {
-                        # interger numberic types
+                        # interger numeric types
                         "<integer>$item</integer>"
                     }
                 )"
