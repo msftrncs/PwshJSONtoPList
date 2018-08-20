@@ -1,8 +1,8 @@
 # attempt to convert a JSON textmate language file back to PLIST tmLanguage file
 
-#define a function to create a plist document, trying to keep it as generic as possible
-function ConvertTo-PList ($PropertyList ) {
-    #write out a PList document based on the property list supplied
+# define a function to create a plist document, trying to keep it as generic as possible
+function ConvertTo-PList ($PropertyList) {
+    # write out a PList document based on the property list supplied
 
     function writeXMLcontent ([string]$value) {
         # write an escaped XML value
@@ -15,9 +15,9 @@ function ConvertTo-PList ($PropertyList ) {
         # name of the property is option, but that is only intended for the first property object
 
         function writevalue ($item, [string]$indent) {
-            # write a property value, recurse non-string type objects back to writekey
+            # write a property value, recurse non-string type objects back to writeproperty
 
-            if ($item -is [string] ) {
+            if ($item -is [string]) {
                 # handle strings
                 "$indent<string>$(writeXMLcontent($item))</string>"
             }
@@ -53,7 +53,7 @@ function ConvertTo-PList ($PropertyList ) {
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
     '<plist version="1.0">'
 
-    # start writing the property list, the property list should be an object
+    # start writing the property list, the property list should be an object, has no name
     writeproperty $null $PropertyList ""
 
     # end the PList document
