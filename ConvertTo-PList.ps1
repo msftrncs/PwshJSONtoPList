@@ -94,9 +94,18 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
         if ($item -is [array]) {
             # handle arrays
             "$level<array>"
-            # iterate through the items in the array
-            foreach ($subitem in $item) {
-                writevalue $subitem "$level$indent"
+            if ($item -is [byte[]]) {
+                # handle an array of bytes, encode as BASE64 string, store as DATA block
+                # use REGEX to split out the string in to 44 character chucks properly indented
+                "$level$indent<data>"
+                ([regex]("(.{1,44})")).matches([convert]::ToBase64String($item)).value.foreach{"$level$indent$_"}
+                "$level$indent</data>"
+            }
+            else {
+                # iterate through the items in the array
+                foreach ($subitem in $item) {
+                    writevalue $subitem "$level$indent"
+                }
             }
             "$level</array>"
         }
