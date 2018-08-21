@@ -8,7 +8,7 @@ Its intention is to convert the VS Code PowerShell tmLanguage language syntax fi
 
 Note:
 - SecurityElement.encode is used, so a variety of characters have been escaped.
-- The PList XML generator should be complete, with exception to the item data type handling.
+- The PList XML generator should be complete, with regard to item data type handling.
 - the indentation of the XML is adjustable.
 - The XML document's encoding is hardset as 'encoding="UTF-8"', but might not match the actual output.
 - The resulting XML is output to the stdout (console).
