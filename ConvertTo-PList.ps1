@@ -98,7 +98,7 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
                 # handle an array of bytes, encode as BASE64 string, store as DATA block
                 # use REGEX to split out the string in to 44 character chucks properly indented
                 "$level$indent<data>"
-                ([regex]('(.{1,44})')).matches([convert]::ToBase64String($item)).value.foreach({"$level$indent$_"})
+                [regex]::Matches([convert]::ToBase64String($item), '(.{1,44})').value.foreach( {"$level$indent$_"} )
                 "$level$indent</data>"
             }
             else {
