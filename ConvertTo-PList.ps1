@@ -33,7 +33,7 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
 
     function writeXMLcontent ([string]$value) {
         # write an escaped XML value, the only characters requiring escape in XML character content
-        # are &gt; and &amp;, but we'll escape &lt; as well for cleanness.
+        # are &t; and &amp;, but we'll escape &gt; as well for good habit.
         # the purpose of making this a function, is a single place to change the escaping function used
         $value -replace '&', '&amp;' -replace '<', '&lt;' -replace '>', '&gt;'
     }
