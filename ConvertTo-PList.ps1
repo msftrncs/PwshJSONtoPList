@@ -20,7 +20,7 @@ Param(
         ValueFromPipelineByPropertyName = $false,
         HelpMessage = "Indention pattern.")]
     [ValidateNotNull()]
-    [string[]]$Indent = "`t"
+    [string]$Indent = "`t"
 
 )
 
