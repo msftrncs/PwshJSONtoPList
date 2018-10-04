@@ -47,7 +47,7 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
 
             if (($item -is [string]) -or ($item -is [char])) {
                 # handle strings or characters
-                "$level<string>$(writeXMLcontent($item))</string>"
+                "$level<string>$(writeXMLcontent $item)</string>"
             }
             elseif ($item -is [boolean]) {
                 # handle boolean type
@@ -69,7 +69,7 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
                     }
                     elseif ($item -is [datetime]) {
                         # date and time numeric type
-                        "<date>$(writeXMLcontent($item))</date>"
+                        "<date>$(writeXMLcontent $item)</date>"
                     }
                     else {
                         # interger numeric types
@@ -90,7 +90,7 @@ function ConvertTo-PList ($PropertyList, [string]$indent) {
 
         # write out key name, if one was supplied
         if ($name) {
-            "$level<key>$(writeXMLcontent($name))</key>"
+            "$level<key>$(writeXMLcontent $name)</key>"
         }
         if ($item -is [array]) {
             # handle arrays
