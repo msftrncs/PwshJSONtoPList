@@ -145,11 +145,11 @@ foreach ($file in $Path) {
     # write the PList document from a custom made object, supplying some data missing from the JSON file, ignoring some JSON objects
     # and reordering the items that remain.
     ConvertTo-Plist ([ordered]@{
-            'fileTypes'                                          = ([string[]]$('ps1', 'psm1', 'psd1'))
+            fileTypes                                            = ([string[]]$('ps1', 'psm1', 'psd1'))
             $grammer_json.psobject.Properties['name'].Name       = $grammer_json.psobject.Properties['name'].Value
             $grammer_json.psobject.Properties['patterns'].Name   = $grammer_json.psobject.Properties['patterns'].Value
             $grammer_json.psobject.Properties['repository'].Name = $grammer_json.psobject.Properties['repository'].Value
             $grammer_json.psobject.Properties['scopeName'].Name  = $grammer_json.psobject.Properties['scopeName'].Value
-            'uuid'                                               = 'f8f5ffb0-503e-11df-9879-0800200c9a66'
+            uuid                                                 = 'f8f5ffb0-503e-11df-9879-0800200c9a66'
         }) $Indent
 }
