@@ -36,13 +36,21 @@ function ConvertTo-PList
     # $PropertyList is an object containing the entire property list tree.  Hash tables are supported.
     # $Indent is a string representing the indentation to use.
     #   Typically use "`t" or "  ".
-    # $StateencodingAs is a string to supply in the XML header that represents the encoding XML will be represented as in the final file
+    # $StateencodingAs is a string to supply in the XML header that represents the encoding XML will 
+    # be represented as in the final file
 
     function writeXMLcontent ([string]$value) {
-        # write an escaped XML value, the only characters requiring escape in XML character content
+        # write an escaped XML content, the only characters requiring escape in XML character content
         # are &lt; and &amp;, but we'll escape &gt; as well for good habit.
         # the purpose of making this a function, is a single place to change the escaping function used
         $value -replace '&', '&amp;' -replace '<', '&lt;' -replace '>', '&gt;'
+    }
+
+    function writeXMLvalue ([string]$value) {
+        # write an escaped XML value, the only characters requiring escape in XML attribute values
+        # are &lt; and &amp; and &quo, but we'll escape &gt; as well for good habit.
+        # the purpose of making this a function, is a single place to change the escaping function used
+        (writeXMLcontent $value) -replace '"', '&quot;'
     }
 
     function writeproperty ([string]$name, $item, [string]$level) {
@@ -124,7 +132,7 @@ function ConvertTo-PList
     }
 
     # write the PList Header
-    '<?xml version="1.0"' + $(if ($StateEncodingAs) {' encoding="' + $StateEncodingAs + '"'}) + '?>'
+    '<?xml version="1.0"' + $(if ($StateEncodingAs) {' encoding="' + (writeXMLvalue $StateEncodingAs) + '"'}) + '?>'
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
     '<plist version="1.0">'
 
