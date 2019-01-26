@@ -28,12 +28,15 @@ function ConvertTo-PList
     [ValidateNotNull()]
     [string]$Indent = "`t",
 
+    [string]$StateEncodingAs = "UTF-8",
+
     [switch]$IndentFirstItem
 ) {
     # write out a PList document based on the property list supplied
     # $PropertyList is an object containing the entire property list tree.  Hash tables are supported.
-    # $indent is a string representing the indentation to use.
+    # $Indent is a string representing the indentation to use.
     #   Typically use "`t" or "  ".
+    # $StateencodingAs is a string to supply in the XML header that represents the encoding XML will be represented as in the final file
 
     function writeXMLcontent ([string]$value) {
         # write an escaped XML value, the only characters requiring escape in XML character content
@@ -121,7 +124,7 @@ function ConvertTo-PList
     }
 
     # write the PList Header
-    '<?xml version="1.0" encoding="UTF-8"?>'
+    '<?xml version="1.0"' + $(if ($StateEncodingAs) {' encoding="' + $StateEncodingAs + '"'}) + '?>'
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
     '<plist version="1.0">'
 
