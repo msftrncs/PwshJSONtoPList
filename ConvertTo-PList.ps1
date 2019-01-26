@@ -20,7 +20,10 @@ function ConvertTo-PList
     [Parameter(Mandatory = $true,
         ValueFromPipeline = $true,
         ValueFromPipelineByPropertyName = $true)]
-    $PropertyList, 
+    [AllowEmptyCollection() ]
+    [AllowNull()]
+    [AllowEmptyString()]
+    [object]$PropertyList, 
 
     [ValidateNotNull()]
     [string]$Indent = "`t",
