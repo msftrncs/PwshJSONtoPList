@@ -1,29 +1,15 @@
 # attempt to convert a JSON textmate language file back to PLIST tmLanguage file
 
-# parameters to the script - needs work to support multiple paths  (WIP)
-#[CmdletBinding()]
-#Param(
-#
-#    [Parameter(Mandatory = $false,
-#        Position = 1,
-#        ValueFromPipeline = $false,
-#        ValueFromPipelineByPropertyName = $false,
-#        HelpMessage = "Indention pattern.")]
-#    [ValidateNotNull()]
-#    [string]$Indent = "`t"
-#
-#)
-
 # define a function to create a plist document, trying to keep it as generic as possible
-function ConvertTo-PList 
+function ConvertTo-PList
 (
     [Parameter(Mandatory = $true,
         ValueFromPipeline = $true,
         ValueFromPipelineByPropertyName = $true)]
-    [AllowEmptyCollection() ]
+    [AllowEmptyCollection()]
     [AllowNull()]
     [AllowEmptyString()]
-    [object]$PropertyList, 
+    [object]$PropertyList,
 
     [ValidateNotNull()]
     [string]$Indent = "`t",
