@@ -22,7 +22,7 @@ function ConvertTo-PList
     # $PropertyList is an object containing the entire property list tree.  Hash tables are supported.
     # $Indent is a string representing the indentation to use.
     #   Typically use "`t" or "  ".
-    # $StateencodingAs is a string to supply in the XML header that represents the encoding XML will 
+    # $StateEncodingAs is a string to supply in the XML header that represents the encoding XML will
     # be represented as in the final file
 
     function writeXMLcontent ([string]$value) {
