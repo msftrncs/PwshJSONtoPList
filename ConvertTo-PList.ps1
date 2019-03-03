@@ -1,6 +1,30 @@
-# attempt to convert a JSON textmate language file back to PLIST tmLanguage file
-
-# define a function to create a plist document, trying to keep it as generic as possible
+<#
+.SYNOPSIS
+    Convert a PowerShell object to an XML Plist represented in a string.
+.DESCRIPTION
+    Converts a PowerShell object to an XML PList (property list) notation as a string.
+.PARAMETER PropertyList
+    The input PowerShell object to be represented in an XML PList notation.  This parameter may be received from the pipeline.
+.PARAMETER Indent
+    Specifies a string value to be used for each level of the indention within the XML document.
+.PARAMETER StateEncodingAs
+    Specifies a string value to be stated as the value of the `encoding` attribute of the XML document header.  This does not actually set the encoding.
+.PARAMETER IndentFirstItem
+    A switch causing the first level of objects to be indented as per normal XML practices.
+.EXAMPLE
+    $grammar_json | ConvertTo-Plist -Indent "`t" -StateEncodingAs 'UTF-8' | Set-Content 'out\PowerShellSyntax.tmLanguage' -Encoding 'UTF8'
+.INPUTS
+    [object] - containing the PList as conventional PowerShell object types, hashtables, arrays, strings, numeric values, and byte arrays.
+.OUTPUTS
+    [string] - the input object returned in an XML PList notation.
+.NOTES
+    Script / Function / Class assembled by Carl Morris, Morris Softronics, Hooper, NE, USA
+    Initial release - Aug 18, 2018
+.LINK
+    https://github.com/msftrncs/PwshJSONtoPList/
+.FUNCTIONALITY
+    data format conversion
+#>
 function ConvertTo-PList
 (
     [Parameter(Mandatory = $true,
@@ -11,7 +35,6 @@ function ConvertTo-PList
     [AllowEmptyString()]
     [object]$PropertyList,
 
-    [ValidateNotNull()]
     [string]$Indent = "`t",
 
     [string]$StateEncodingAs = "UTF-8",
@@ -117,14 +140,16 @@ function ConvertTo-PList
         }
     }
 
-    # write the PList Header
-    '<?xml version="1.0"' + $(if ($StateEncodingAs) {' encoding="' + (writeXMLvalue $StateEncodingAs) + '"'}) + '?>'
-    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
-    '<plist version="1.0">'
+    $(
+        # write the PList Header
+        '<?xml version="1.0"' + $(if ($StateEncodingAs) {' encoding="' + (writeXMLvalue $StateEncodingAs) + '"'}) + '?>'
+        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+        '<plist version="1.0">'
 
-    # start writing the property list, the property list should be an object, has no name, and starts at base level
-    writeproperty $null $PropertyList $(if ($IndentFirstItem.IsPresent) {$Indent} else {""} )
+        # start writing the property list, the property list should be an object, has no name, and starts at base level
+        writeproperty $null $PropertyList $(if ($IndentFirstItem.IsPresent) {$Indent} else {""} )
 
-    # end the PList document
-    '</plist>'
+        # end the PList document
+        '</plist>'
+    ) -join "`r`n"
 }
