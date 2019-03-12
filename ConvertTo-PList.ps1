@@ -147,7 +147,7 @@ function ConvertTo-PList
         '<plist version="1.0">'
 
         # start writing the property list, the property list should be an object, has no name, and starts at base level
-        writeproperty $null $PropertyList $(if ($IndentFirstItem.IsPresent) {$Indent} else {""} )
+        writeproperty $null $PropertyList $(if ($IndentFirstItem.IsPresent) {$Indent} else {""})
 
         # end the PList document
         '</plist>'
