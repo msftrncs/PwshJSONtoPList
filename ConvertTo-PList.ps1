@@ -27,14 +27,15 @@
 #>
 function ConvertTo-PList
 (
-    [Parameter(Mandatory = $true,
-        ValueFromPipeline = $true,
-        ValueFromPipelineByPropertyName = $true)]
+    [Parameter(Mandatory,
+        ValueFromPipeline,
+        ValueFromPipelineByPropertyName)]
     [AllowEmptyCollection()]
     [AllowNull()]
     [AllowEmptyString()]
     [object]$PropertyList,
 
+    [PSDefaultValue(Help = 'Tab')]
     [string]$Indent = "`t",
 
     [string]$StateEncodingAs = "UTF-8",
@@ -48,18 +49,18 @@ function ConvertTo-PList
     # $StateEncodingAs is a string to supply in the XML header that represents the encoding XML will
     # be represented as in the final file
 
-    function writeXMLcontent ([string]$value) {
+    filter writeXMLcontent {
         # write an escaped XML content, the only characters requiring escape in XML character content
         # are &lt; and &amp;, but we'll escape &gt; as well for good habit.
         # the purpose of making this a function, is a single place to change the escaping function used
-        $value -replace '&', '&amp;' -replace '<', '&lt;' -replace '>', '&gt;'
+        $_ -replace '&', '&amp;' -replace '<', '&lt;' -replace '>', '&gt;'
     }
 
-    function writeXMLvalue ([string]$value) {
+    filter writeXMLvalue {
         # write an escaped XML value, the only characters requiring escape in XML attribute values
         # are &lt; and &amp; and &quo, but we'll escape &gt; as well for good habit.
         # the purpose of making this a function, is a single place to change the escaping function used
-        (writeXMLcontent $value) -replace '"', '&quot;'
+        ($_ | writeXMLcontent) -replace '"', '&quot;'
     }
 
     function writeproperty ([string]$name, $item, [string]$level) {
@@ -71,7 +72,7 @@ function ConvertTo-PList
 
             if (($item -is [string]) -or ($item -is [char])) {
                 # handle strings or characters
-                "$level<string>$(writeXMLcontent $item)</string>"
+                "$level<string>$($item | writeXMLcontent)</string>"
             }
             elseif ($item -is [boolean]) {
                 # handle boolean type
@@ -93,7 +94,7 @@ function ConvertTo-PList
                     }
                     elseif ($item -is [datetime]) {
                         # date and time numeric type
-                        "<date>$(writeXMLcontent $item)</date>"
+                        "<date>$($item | writeXMLcontent)</date>"
                     }
                     else {
                         # interger numeric types
@@ -114,7 +115,7 @@ function ConvertTo-PList
 
         # write out key name, if one was supplied
         if ($name) {
-            "$level<key>$(writeXMLcontent $name)</key>"
+            "$level<key>$($item | writeXMLcontent)</key>"
         }
         if ($item -is [array]) {
             # handle arrays
@@ -142,7 +143,7 @@ function ConvertTo-PList
 
     $(
         # write the PList Header
-        '<?xml version="1.0"' + $(if ($StateEncodingAs) {' encoding="' + (writeXMLvalue $StateEncodingAs) + '"'}) + '?>'
+        '<?xml version="1.0"' + $(if ($StateEncodingAs) {' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"'}) + '?>'
         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
         '<plist version="1.0">'
 
@@ -151,5 +152,5 @@ function ConvertTo-PList
 
         # end the PList document
         '</plist>'
-    ) -join "`r`n"
+    ) -join $(if (-not $IsCoreCLR -or $IsWindows) {"`r`n"} else {"`n"})
 }
