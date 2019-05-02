@@ -43,8 +43,9 @@ A switch that specifies that the first item level of the PLIST XML is to be inde
 
 ### Output
 
-The output of this function is an array of strings (`[string[]]`).  Use Out-File or Set-Content and be sure to assign the correct encoding.  You may also use the `[xml]` accelerator when assigning the output to a variable, and then use XML cmdlets or tools on the result.
+The output of this function is a single string (`[string]`).  Use Out-File or Set-Content and be sure to assign the correct encoding.  You may also use the `[xml]` accelerator when assigning the output to a variable, and then use XML cmdlets or tools on the result.
 
 Note:
 - Escapes only '&lt;', '&amp;' and '&gt;'.
 - The PList XML generator should be complete, with regard to item data type handling.
+- Objects that possess recursive backreferences (loops) will lock up the function.  There is no `-Depth` parameter yet.
