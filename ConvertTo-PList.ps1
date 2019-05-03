@@ -12,7 +12,7 @@
 .PARAMETER IndentFirstItem
     A switch causing the first level of objects to be indented as per normal XML practices.
 .EXAMPLE
-    $grammar_json | ConvertTo-Plist -Indent "`t" -StateEncodingAs 'UTF-8' | Set-Content 'out\PowerShellSyntax.tmLanguage' -Encoding 'UTF8'
+    $grammar_json | ConvertTo-Plist -Indent `t -StateEncodingAs UTF-8 | Set-Content out\PowerShellSyntax.tmLanguage -Encoding UTF8
 .INPUTS
     [object] - containing the PList as conventional PowerShell object types, hashtables, arrays, strings, numeric values, and byte arrays.
 .OUTPUTS
@@ -27,9 +27,7 @@
 #>
 function ConvertTo-PList
 (
-    [Parameter(Mandatory,
-        ValueFromPipeline,
-        ValueFromPipelineByPropertyName)]
+    [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
     [AllowEmptyCollection()]
     [AllowNull()]
     [AllowEmptyString()]
@@ -38,7 +36,7 @@ function ConvertTo-PList
     [PSDefaultValue(Help = 'Tab')]
     [string]$Indent = "`t",
 
-    [string]$StateEncodingAs = "UTF-8",
+    [string]$StateEncodingAs = 'UTF-8',
 
     [switch]$IndentFirstItem
 ) {
@@ -115,7 +113,7 @@ function ConvertTo-PList
 
         # write out key name, if one was supplied
         if ($name) {
-            "$level<key>$($item | writeXMLcontent)</key>"
+            "$level<key>$($name | writeXMLcontent)</key>"
         }
         if ($item -is [array]) {
             # handle arrays
