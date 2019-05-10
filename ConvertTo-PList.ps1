@@ -117,7 +117,7 @@ function ConvertTo-PList
                 "$indention</dict>"
             } else {
                 # object has reached maximum depth, cast it out as a string
-                "$indention<string>$($item | writeXMLcontent)</string>"
+                writevalue "$item" "$indention"
             }
         }
 
@@ -142,7 +142,7 @@ function ConvertTo-PList
                 "$indention</array>"
             } else {
                 # object has reached maximum depth, cast it out as a string
-                "$indention<string>$($item | writeXMLcontent)</string>"
+                writevalue "$item" "$indention"
             }
         } else {
             # handle a single object
