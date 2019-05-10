@@ -71,36 +71,30 @@ function ConvertTo-PList
             if (($item -is [string]) -or ($item -is [char])) {
                 # handle strings or characters
                 "$level<string>$($item | writeXMLcontent)</string>"
-            }
-            elseif ($item -is [boolean]) {
+            } elseif ($item -is [boolean]) {
                 # handle boolean type
                 "$level$(
                     if ($item) {
                         "<true/>"
-                    }
-                    else {
+                    } else {
                         "<false/>"
                     }
                 )"
-            }
-            elseif ($item -is [ValueType]) {
+            } elseif ($item -is [ValueType]) {
                 # handle numeric types
                 "$level$(
                     if (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
                         # floating point or decimal numeric types
                         "<real>$item</real>"
-                    }
-                    elseif ($item -is [datetime]) {
+                    } elseif ($item -is [datetime]) {
                         # date and time numeric type
-                        "<date>$($item | writeXMLcontent)</date>"
-                    }
-                    else {
+                        "<date>$($item.ToString('o') | writeXMLcontent)</date>"
+                    } else {
                         # interger numeric types
                         "<integer>$item</integer>"
                     }
                 )"
-            }
-            else {
+            } else {
                 # handle objects by recursing with writeproperty
                 "$level<dict>"
                 # iterate through the items (force to a PSCustomObject for consistency)
@@ -121,10 +115,9 @@ function ConvertTo-PList
                 # handle an array of bytes, encode as BASE64 string, write as DATA block
                 # use REGEX to split out the string in to 44 character chunks properly indented
                 "$level<data>"
-                [regex]::Matches([convert]::ToBase64String($item), '(.{1,44})').value.foreach( {"$level$Indent$_"} )
+                [regex]::Matches([convert]::ToBase64String($item), '(.{1,44})').value.foreach({ "$level$Indent$_" })
                 "$level</data>"
-            }
-            else {
+            } else {
                 "$level<array>"
                 # iterate through the items in the array
                 foreach ($subitem in $item) {
@@ -132,8 +125,7 @@ function ConvertTo-PList
                 }
                 "$level</array>"
             }
-        }
-        else {
+        } else {
             # handle a single object
             Writevalue $item $level
         }
@@ -141,14 +133,14 @@ function ConvertTo-PList
 
     $(
         # write the PList Header
-        '<?xml version="1.0"' + $(if ($StateEncodingAs) {' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"'}) + '?>'
+        '<?xml version="1.0"' + $(if ($StateEncodingAs) { ' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"' }) + '?>'
         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
         '<plist version="1.0">'
 
         # start writing the property list, the property list should be an object, has no name, and starts at base level
-        writeproperty $null $PropertyList $(if ($IndentFirstItem.IsPresent) {$Indent} else {""})
+        writeproperty $null $PropertyList $(if ($IndentFirstItem.IsPresent) { $Indent } else { "" })
 
         # end the PList document
         '</plist>'
-    ) -join $(if (-not $IsCoreCLR -or $IsWindows) {"`r`n"} else {"`n"})
+    ) -join $(if (-not $IsCoreCLR -or $IsWindows) { "`r`n" } else { "`n" })
 }
