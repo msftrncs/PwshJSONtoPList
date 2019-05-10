@@ -9,6 +9,8 @@
     Specifies a string value to be used for each level of the indention within the XML document.
 .PARAMETER StateEncodingAs
     Specifies a string value to be stated as the value of the `encoding` attribute of the XML document header.  This does not actually set the encoding.
+.PARAMETER Depth
+    Specifies the maximum depth of recursion permitted for the input property list object.
 .PARAMETER IndentFirstItem
     A switch causing the first level of objects to be indented as per normal XML practices.
 .EXAMPLE
@@ -38,6 +40,9 @@ function ConvertTo-PList
 
     [string]$StateEncodingAs = 'UTF-8',
 
+    [ValidateRange(1, 100)]
+    [int32]$Depth = 2,
+
     [switch]$IndentFirstItem
 ) {
     # write out a PList document based on the property list supplied
@@ -61,19 +66,19 @@ function ConvertTo-PList
         ($_ | writeXMLcontent) -replace '"', '&quot;'
     }
 
-    function writeproperty ([string]$name, $item, [string]$level) {
+    function writeproperty ([string]$name, $item, [string]$indention, [int32]$level) {
         # writing the property may require recursively breaking down the objects based on their type
         # name of the property is optional, but that is only intended for the first property object
 
-        function writevalue ($item, [string]$level) {
+        function writevalue ($item, [string]$indention) {
             # write a property value, recurse non-string type objects back to writeproperty
 
             if (($item -is [string]) -or ($item -is [char])) {
                 # handle strings or characters
-                "$level<string>$($item | writeXMLcontent)</string>"
+                "$indention<string>$($item | writeXMLcontent)</string>"
             } elseif ($item -is [boolean]) {
                 # handle boolean type
-                "$level$(
+                "$indention$(
                     if ($item) {
                         "<true/>"
                     } else {
@@ -82,7 +87,7 @@ function ConvertTo-PList
                 )"
             } elseif ($item -is [ValueType]) {
                 # handle numeric types
-                "$level$(
+                "$indention$(
                     if (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
                         # floating point or decimal numeric types
                         "<real>$item</real>"
@@ -94,40 +99,54 @@ function ConvertTo-PList
                         "<integer>$item</integer>"
                     }
                 )"
-            } else {
+            } elseif ($level -le $Depth) {
                 # handle objects by recursing with writeproperty
-                "$level<dict>"
-                # iterate through the items (force to a PSCustomObject for consistency)
-                foreach ($property in ([PSCustomObject]$item).psobject.Properties) {
-                    writeproperty $property.Name $property.Value "$level$Indent"
+                "$indention<dict>"
+                # iterate through the items
+                if ($item -is [pscustomobject]) {
+                    # process a custom object's properties
+                    foreach ($property in $item.psobject.Properties) {
+                        writeproperty $property.Name $property.Value "$indention$Indent" ($level + 1)
+                    }
+                } else {
+                    # process what we assume is a hashtable object
+                    foreach ($key in $item.Keys) {
+                        writeproperty $key $item[$key] "$indention$Indent" ($level + 1)
+                    }
                 }
-                "$level</dict>"
+                "$indention</dict>"
+            } else {
+                # object has reached maximum depth, cast it out as a string
+                "$indention<string>$($item | writeXMLcontent)</string>"
             }
         }
 
         # write out key name, if one was supplied
         if ($name) {
-            "$level<key>$($name | writeXMLcontent)</key>"
+            "$indention<key>$($name | writeXMLcontent)</key>"
         }
         if ($item -is [array]) {
             # handle arrays
             if ($item -is [byte[]]) {
                 # handle an array of bytes, encode as BASE64 string, write as DATA block
                 # use REGEX to split out the string in to 44 character chunks properly indented
-                "$level<data>"
-                [regex]::Matches([convert]::ToBase64String($item), '(.{1,44})').value.foreach({ "$level$Indent$_" })
-                "$level</data>"
-            } else {
-                "$level<array>"
+                "$indention<data>"
+                [regex]::Matches([convert]::ToBase64String($item), '(.{1,44})').value.foreach({ "$indention$Indent$_" })
+                "$indention</data>"
+            } elseif ($level -le $Depth) {
+                "$indention<array>"
                 # iterate through the items in the array
                 foreach ($subitem in $item) {
-                    writevalue $subitem "$level$Indent"
+                    writeproperty '' $subitem "$indention$Indent" ($level + 1)
                 }
-                "$level</array>"
+                "$indention</array>"
+            } else {
+                # object has reached maximum depth, cast it out as a string
+                "$indention<string>$($item | writeXMLcontent)</string>"
             }
         } else {
             # handle a single object
-            Writevalue $item $level
+            Writevalue $item $indention
         }
     }
 
@@ -138,7 +157,7 @@ function ConvertTo-PList
         '<plist version="1.0">'
 
         # start writing the property list, the property list should be an object, has no name, and starts at base level
-        writeproperty $null $PropertyList $(if ($IndentFirstItem.IsPresent) { $Indent } else { "" })
+        writeproperty '' $PropertyList $(if ($IndentFirstItem.IsPresent) { $Indent } else { '' }) 0
 
         # end the PList document
         '</plist>'
