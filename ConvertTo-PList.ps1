@@ -103,15 +103,16 @@ function ConvertTo-PList
                 # handle objects by recursing with writeproperty
                 "$indention<dict>"
                 # iterate through the items
-                if ($item -is [pscustomobject]) {
-                    # process a custom object's properties
-                    foreach ($property in $item.psobject.Properties) {
-                        writeproperty $property.Name $property.Value "$indention$Indent" ($level + 1)
-                    }
-                } else {
+                if ($item.GetType().Name -in 'HashTable', 'OrderedDictionary') {
                     # process what we assume is a hashtable object
                     foreach ($key in $item.Keys) {
                         writeproperty $key $item[$key] "$indention$Indent" ($level + 1)
+                    }
+                }
+                else {
+                    # process a custom object's properties
+                    foreach ($property in [PSCustomObject]$item.psobject.Properties) {
+                        writeproperty $property.Name $property.Value "$indention$Indent" ($level + 1)
                     }
                 }
                 "$indention</dict>"
