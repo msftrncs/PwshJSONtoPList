@@ -122,9 +122,14 @@ function ConvertTo-PList
             }
         }
 
-        # write out key name, if one was supplied
-        if ($name) {
-            "$indention<key>$($name | writeXMLcontent)</key>"
+        # write out key name, if one was supplied - or while beyond level 0 (base)
+        if ($level -gt 0) {
+            if ($name) {
+                "$indention<key>$($name | writeXMLcontent)</key>"
+            } else {
+                # no key name was supplied
+                "$indention<key/>"
+            }
         }
         if ($item -is [array]) {
             # handle arrays
