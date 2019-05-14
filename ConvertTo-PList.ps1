@@ -66,7 +66,7 @@ function ConvertTo-PList
         ($_ | writeXMLcontent) -replace '"', '&quot;'
     }
 
-    function writeproperty ([string]$name, $item, [string]$indention, [int32]$level) {
+    function writeproperty ([string]$name, $item, [string]$indention, [int32]$level, [switch]$NoKey) {
         # writing the property may require recursively breaking down the objects based on their type
         # name of the property is optional, but that is only intended for the first property object
 
@@ -108,8 +108,7 @@ function ConvertTo-PList
                     foreach ($key in $item.Keys) {
                         writeproperty $key $item[$key] "$indention$Indent" ($level + 1)
                     }
-                }
-                else {
+                } else {
                     # process a custom object's properties
                     foreach ($property in [PSCustomObject]$item.psobject.Properties) {
                         writeproperty $property.Name $property.Value "$indention$Indent" ($level + 1)
@@ -123,7 +122,7 @@ function ConvertTo-PList
         }
 
         # write out key name, if one was supplied - or while beyond level 0 (base)
-        if ($level -gt 0) {
+        if (-not $NoKey) {
             if ($name) {
                 "$indention<key>$($name | writeXMLcontent)</key>"
             } else {
@@ -143,7 +142,7 @@ function ConvertTo-PList
                 "$indention<array>"
                 # iterate through the items in the array
                 foreach ($subitem in $item) {
-                    writeproperty '' $subitem "$indention$Indent" ($level + 1)
+                    writeproperty '' $subitem "$indention$Indent" ($level + 1) -NoKey
                 }
                 "$indention</array>"
             } else {
@@ -163,7 +162,7 @@ function ConvertTo-PList
         '<plist version="1.0">'
 
         # start writing the property list, the property list should be an object, has no name, and starts at base level
-        writeproperty '' $PropertyList $(if ($IndentFirstItem.IsPresent) { $Indent } else { '' }) 0
+        writeproperty '' $PropertyList $(if ($IndentFirstItem.IsPresent) { $Indent } else { '' }) 0 -NoKey
 
         # end the PList document
         '</plist>'
