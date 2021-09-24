@@ -66,92 +66,94 @@ function ConvertTo-PList
         ($_ | writeXMLcontent) -replace '"', '&quot;'
     }
 
-    function writeproperty ([string]$name, $item, [string]$indention, [int32]$level, [switch]$NoKey) {
-        # writing the property may require recursively breaking down the objects based on their type
-        # name of the property is optional, but that is only intended for the first property object
+    function writeObject ($item, [string]$indention, [int32]$level) {
+        # write a property value, recurse non-string type objects back to writeproperty
 
-        function writevalue ($item, [string]$indention) {
-            # write a property value, recurse non-string type objects back to writeproperty
+        function writeProperty ([string]$name, $item) {
+            # write a dictionary key and its value
 
-            if (($item -is [string]) -or ($item -is [char])) {
-                # handle strings or characters
-                "$indention<string>$($item | writeXMLcontent)</string>"
-            } elseif ($item -is [boolean]) {
-                # handle boolean type
-                "$indention$(
-                    if ($item) {
-                        "<true/>"
-                    } else {
-                        "<false/>"
-                    }
-                )"
-            } elseif ($item -is [ValueType]) {
-                # handle numeric types
-                "$indention$(
-                    if (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
-                        # floating point or decimal numeric types
-                        "<real>$item</real>"
-                    } elseif ($item -is [datetime]) {
-                        # date and time numeric type
-                        "<date>$($item.ToString('o') | writeXMLcontent)</date>"
-                    } else {
-                        # interger numeric types
-                        "<integer>$item</integer>"
-                    }
-                )"
-            } elseif ($level -le $Depth) {
-                # handle objects by recursing with writeproperty
-                "$indention<dict>"
-                # iterate through the items
-                if ($item.GetType().Name -in 'HashTable', 'OrderedDictionary') {
-                    # process what we assume is a hashtable object
-                    foreach ($key in $item.Keys) {
-                        writeproperty $key $item[$key] "$indention$Indent" ($level + 1)
-                    }
-                } else {
-                    # process a custom object's properties
-                    foreach ($property in [PSCustomObject]$item.psobject.Properties) {
-                        writeproperty $property.Name $property.Value "$indention$Indent" ($level + 1)
-                    }
-                }
-                "$indention</dict>"
-            } else {
-                # object has reached maximum depth, cast it out as a string
-                writevalue "$item" "$indention"
-            }
-        }
-
-        # write out key name, if one was supplied - or while beyond level 0 (base)
-        if (-not $NoKey) {
+            # write out key name, if one was supplied
             if ($name) {
-                "$indention<key>$($name | writeXMLcontent)</key>"
+                "$indention$Indent<key>$($name | writeXMLcontent)</key>"
             } else {
                 # no key name was supplied
-                "$indention<key/>"
+                "$indention$Indent<key/>"
             }
+            # write the property value, which could be an object
+            writeObject $item $indention$Indent ($level + 1)
         }
-        if ($item -is [array]) {
-            # handle arrays
-            if ($item -is [byte[]]) {
+
+        if (($item -is [string]) -or ($item -is [char]) -or ($item -is [enum])) {
+            # handle strings, characters, or enums
+            "$indention<string>$($item | writeXMLcontent)</string>"
+        } elseif ($item -is [boolean]) {
+            # handle boolean type
+            "$indention$(
+                if ($item) {
+                    "<true/>"
+                } else {
+                    "<false/>"
+                }
+            )"
+        } elseif ($item -is [ValueType]) {
+            # handle numeric types
+            "$indention$(
+                if (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
+                    # floating point or decimal numeric types
+                    "<real>$item</real>"
+                } elseif ($item -is [datetime]) {
+                    # date and time numeric type
+                    "<date>$($item.ToString('o') | writeXMLcontent)</date>"
+                } else {
+                    # interger numeric types
+                    "<integer>$item</integer>"
+                }
+            )"
+        } elseif ($item -is [byte[]]) {
+            if ($item) {
                 # handle an array of bytes, encode as BASE64 string, write as DATA block
                 # use REGEX to split out the string in to 44 character chunks properly indented
                 "$indention<data>"
                 [regex]::Matches([convert]::ToBase64String($item), '(.{1,44})').value.foreach({ "$indention$Indent$_" })
                 "$indention</data>"
-            } elseif ($level -le $Depth) {
-                "$indention<array>"
-                # iterate through the items in the array
-                foreach ($subitem in $item) {
-                    writeproperty '' $subitem "$indention$Indent" ($level + 1) -NoKey
-                }
-                "$indention</array>"
             } else {
-                # object has reached maximum depth, cast it out as a string
-                writevalue "$item" "$indention"
+                "$indention<data/>" # empty object
+            }
+        } elseif ($level -le $Depth) {
+            if ($item -is [array]) {
+                # handle arrays
+                if ($item) {
+                    "$indention<array>"
+                    # iterate through the items in the array
+                    foreach ($subItem in $item) {
+                        writeObject $subItem $indention$Indent ($level + 1)
+                    }
+                    "$indention</array>"
+                } else {
+                    "$indention<array/>" # empty object
+                }
+            } elseif ($item) {
+                # handle objects by recursing with writeProperty
+                "$indention<dict>"
+                # iterate through the items
+                if ($item.GetType().Name -in 'HashTable', 'OrderedDictionary') {
+                    # process what we assume is a hashtable object
+                    foreach ($key in $item.Keys) {
+                        writeProperty $key $item[$key]
+                    }
+                } else {
+                    # process a custom object's properties
+                    foreach ($property in [PSCustomObject]$item.psobject.Properties) {
+                        writeProperty $property.Name $property.Value
+                    }
+                }
+                "$indention</dict>"
+            } else {
+                "$indention<dict/>" # empty object
             }
         } else {
-            # handle a single object
-            Writevalue $item $indention
+            # object has reached maximum depth, cast it out as a string
+            writeObject "$item" $indention $level
         }
     }
 
@@ -161,8 +163,8 @@ function ConvertTo-PList
         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
         '<plist version="1.0">'
 
-        # start writing the property list, the property list should be an object, has no name, and starts at base level
-        writeproperty '' $PropertyList $(if ($IndentFirstItem.IsPresent) { $Indent } else { '' }) 0 -NoKey
+        # start writing the property list, the property list should be an object, and starts at base level
+        writeObject $PropertyList $(if ($IndentFirstItem.IsPresent) { $Indent } else { '' }) 0
 
         # end the PList document
         '</plist>'
