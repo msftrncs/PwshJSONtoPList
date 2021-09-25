@@ -67,7 +67,7 @@ function ConvertTo-PList
     }
 
     function writeObject ($item, [string]$indention, [int32]$level) {
-        # write a property value, recurse non-string type objects back to writeproperty
+        # write a property object
 
         function writeProperty ([string]$name, $item) {
             # write a dictionary key and its value
@@ -110,17 +110,18 @@ function ConvertTo-PList
                 }
             )"
         } elseif ($item -is [byte[]]) {
-            if ($item) {
-                # handle an array of bytes, encode as BASE64 string, write as DATA block
-                # use REGEX to split out the string in to 44 character chunks properly indented
-                "$indention<data>"
-                [regex]::Matches([convert]::ToBase64String($item), '(.{1,44})').value.foreach({ "$indention$Indent$_" })
-                "$indention</data>"
+            # handle an array of bytes, encode as BASE64 string, write as DATA block
+            # use REGEX to split out the string in to 44 character chunks properly indented
+            $itemData = [convert]::ToBase64String($item)
+            if ($itemData.Length -lt 44) {
+                "$indention<data>$itemData</data>"    
             } else {
-                "$indention<data/>" # empty object
+                "$indention<data>"
+                [regex]::Matches($itemData, '(.{1,44})').Value.foreach({ "$indention$Indent$_" })
+                "$indention</data>"
             }
         } elseif ($level -le $Depth) {
-            if ($item -is [array]) {
+            if ($item -is [array] -or $item -is [Collections.IList]) {
                 # handle arrays
                 if ($item) {
                     "$indention<array>"
@@ -132,18 +133,18 @@ function ConvertTo-PList
                 } else {
                     "$indention<array/>" # empty object
                 }
-            } elseif ($item) {
+            } elseif ($item -and $(if($item -is [Collections.IDictionary]) {$item.get_Keys().Count} else {@($item.psobject.get_Properties()).Count}) -gt 0) {
                 # handle objects by recursing with writeProperty
                 "$indention<dict>"
                 # iterate through the items
-                if ($item.GetType().Name -in 'HashTable', 'OrderedDictionary') {
+                if ($item-is [Collections.IDictionary]) {
                     # process what we assume is a hashtable object
                     foreach ($key in $item.Keys) {
                         writeProperty $key $item[$key]
                     }
                 } else {
                     # process a custom object's properties
-                    foreach ($property in [PSCustomObject]$item.psobject.Properties) {
+                    foreach ($property in $item.psobject.get_Properties()) {
                         writeProperty $property.Name $property.Value
                     }
                 }
