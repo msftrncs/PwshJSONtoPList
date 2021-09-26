@@ -47,7 +47,15 @@ function ConvertTo-PList
 
     [switch]$IndentFirstItem,
 
-    [switch]$EnumsAsStrings
+    [switch]$EnumsAsStrings,
+
+    [ValidateRange(0,1000)]
+    [uint32]$FormatDataInlineMaxLength,
+
+    [ValidateRange(0,1000)]
+    [uint32]$FormatDataWrapMaxLength = 44,
+
+    [switch]$FormatDataIndentWrapped
 ) {
     # write out a PList document based on the property list supplied
     # $PropertyList is an object containing the entire property list tree.  Hash tables are supported.
@@ -117,11 +125,11 @@ function ConvertTo-PList
             # handle an array of bytes, encode as BASE64 string, write as DATA block
             # use REGEX to split out the string in to 44 character chunks properly indented
             $itemData = [convert]::ToBase64String($item)
-            if ($itemData.Length -lt 44) {
+            if ($FormatDataInlineMaxLengthIsPresent -and ($FormatDataInlineMaxLength -eq 0 -or $itemData.Length -le $FormatDataInlineMaxLength)) {
                 "$indention<data>$itemData</data>"    
             } else {
                 "$indention<data>"
-                [regex]::Matches($itemData, '.{1,44}').Value.foreach({ "$indention$Indent$_" })
+                $DataWrapperRegex.Matches($itemData).Value.ForEach({ "$indention$(if ($FormatDataIndentWrapped) { $Indent })$_" })
                 "$indention</data>"
             }
         } elseif ($level -le $Depth) {
@@ -163,6 +171,9 @@ function ConvertTo-PList
     }
 
     $(
+        $FormatDataInlineMaxLengthIsPresent = $PSBoundParameters.ContainsKey('FormatDataInlineMaxLength')
+        $DataWrapperRegex = [regex]".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
+
         # write the PList Header
         '<?xml version="1.0"' + $(if ($StateEncodingAs) { ' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"' }) + '?>'
         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
