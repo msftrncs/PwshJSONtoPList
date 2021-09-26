@@ -13,6 +13,8 @@
     Specifies the maximum depth of recursion permitted for the input property list object.
 .PARAMETER IndentFirstItem
     A switch causing the first level of objects to be indented as per normal XML practices.
+.PARAMETER EnumsAsStrings
+    A switch that specifies an alternate serialization option that converts all enumerations to their string representations.
 .EXAMPLE
     $grammar_json | ConvertTo-Plist -Indent `t -StateEncodingAs UTF-8 | Set-Content out\PowerShellSyntax.tmLanguage -Encoding UTF8
 .INPUTS
@@ -43,7 +45,9 @@ function ConvertTo-PList
     [ValidateRange(1, 100)]
     [int32]$Depth = 2,
 
-    [switch]$IndentFirstItem
+    [switch]$IndentFirstItem,
+
+    [switch]$EnumsAsStrings
 ) {
     # write out a PList document based on the property list supplied
     # $PropertyList is an object containing the entire property list tree.  Hash tables are supported.
@@ -83,7 +87,7 @@ function ConvertTo-PList
             writeObject $item $indention$Indent ($level + 1)
         }
 
-        if (($item -is [string]) -or ($item -is [char]) -or ($item -is [enum])) {
+        if (($item -is [string]) -or ($item -is [char]) -or ($EnumsAsStrings -and $item -is [enum])) {
             # handle strings, characters, or enums
             "$indention<string>$($item | writeXMLcontent)</string>"
         } elseif ($item -is [boolean]) {
@@ -106,7 +110,7 @@ function ConvertTo-PList
                     "<date>$($item.ToString('o') | writeXMLcontent)</date>"
                 } else {
                     # interger numeric types
-                    "<integer>$item</integer>"
+                    "<integer>$(if ($item -isnot [enum]) { $item } else { $item.value__ })</integer>"
                 }
             )"
         } elseif ($item -is [byte[]]) {
