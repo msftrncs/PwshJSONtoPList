@@ -117,7 +117,7 @@ function ConvertTo-PList
                 "$indention<data>$itemData</data>"    
             } else {
                 "$indention<data>"
-                [regex]::Matches($itemData, '(.{1,44})').Value.foreach({ "$indention$Indent$_" })
+                [regex]::Matches($itemData, '.{1,44}').Value.foreach({ "$indention$Indent$_" })
                 "$indention</data>"
             }
         } elseif ($level -le $Depth) {
