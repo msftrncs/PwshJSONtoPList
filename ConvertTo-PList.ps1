@@ -133,7 +133,7 @@ function ConvertTo-PList
                 } else {
                     "$indention<array/>" # empty object
                 }
-            } elseif ($item -and $(if($item -is [Collections.IDictionary]) {$item.get_Keys().Count} else {@($item.psobject.get_Properties()).Count}) -gt 0) {
+            } elseif ($item -and $(if($item -is [Collections.IDictionary]) { $item.get_Keys().Count } else { @($item.psobject.get_Properties()).Count} ) -gt 0) {
                 # handle objects by recursing with writeProperty
                 "$indention<dict>"
                 # iterate through the items
