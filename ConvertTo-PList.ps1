@@ -7,6 +7,8 @@
     The input PowerShell object to be represented in an XML PList notation.  This parameter may be received from the pipeline.
 .PARAMETER Indent
     Specifies a string value to be used for each level of the indention within the XML document.
+.PARAMETER Compress
+    Omits white space and indented formatting in the output string.
 .PARAMETER StateEncodingAs
     Specifies a string value to be stated as the value of the `encoding` attribute of the XML document header.  This does not actually set the encoding.
 .PARAMETER Depth
@@ -37,30 +39,40 @@
 #>
 function ConvertTo-PList
 (
+    [CmdletBinding(DefaultParameterSetName = 'Indent')]
+
     [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
     [AllowEmptyCollection()]
     [AllowNull()]
     [AllowEmptyString()]
     [object]$PropertyList,
 
+    [Parameter(ParameterSetName = "Indent")]
     [PSDefaultValue(Help = 'Tab')]
     [string]$Indent = "`t",
+
+#    [Parameter(Mandatory,ParameterSetName = "Compress")]
+    [switch]$Compress,
 
     [string]$StateEncodingAs = 'UTF-8',
 
     [ValidateRange(1, 100)]
     [int32]$Depth = 2,
 
+    [Parameter(ParameterSetName = "Indent")]
     [switch]$IndentFirstItem,
 
     [switch]$EnumsAsStrings,
 
+    [Parameter(ParameterSetName = "Indent")]
     [ValidateRange(0,1000)]
     [uint32]$FormatDataInlineMaxLength,
 
+    [Parameter(ParameterSetName = "Indent")]
     [ValidateRange(0,1000)]
     [uint32]$FormatDataWrapMaxLength = 44,
 
+    [Parameter(ParameterSetName = "Indent")]
     [switch]$FormatDataWrappedNoIndent
 ) {
     # write out a PList document based on the property list supplied
@@ -131,7 +143,7 @@ function ConvertTo-PList
             # handle an array of bytes, encode as BASE64 string, write as DATA block
             # use REGEX to split out the string in to 44 character chunks properly indented
             $itemData = [convert]::ToBase64String($item)
-            if (!$itemData -or $FormatDataInlineMaxLengthIsPresent -and ($FormatDataInlineMaxLength -eq 0 -or $itemData.Length -le $FormatDataInlineMaxLength)) {
+            if (!$itemData -or $Compress -or $FormatDataInlineMaxLengthIsPresent -and ($FormatDataInlineMaxLength -eq 0 -or $itemData.Length -le $FormatDataInlineMaxLength)) {
                 "$indention<data>$itemData</data>"    
             } else {
                 "$indention<data>"
@@ -177,8 +189,13 @@ function ConvertTo-PList
     }
 
     $(
-        $FormatDataInlineMaxLengthIsPresent = $PSBoundParameters.ContainsKey('FormatDataInlineMaxLength')
-        $DataWrapperRegex = [regex]".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
+        if (!$Compress) {
+            $FormatDataInlineMaxLengthIsPresent = $PSBoundParameters.ContainsKey('FormatDataInlineMaxLength')
+            $DataWrapperRegex = [regex]".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
+        } else {
+            # remove any indention due to compression.
+            $Indent = '';
+        }
 
         # write the PList Header
         '<?xml version="1.0"' + $(if ($StateEncodingAs) { ' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"' }) + '?>'
@@ -197,5 +214,5 @@ function ConvertTo-PList
 
         # end the PList document
         '</plist>'
-    ) -join $(if (-not $IsCoreCLR -or $IsWindows) { "`r`n" } else { "`n" })
+    ) -join $(if ($Compress) {''} else {if (-not $IsCoreCLR -or $IsWindows) { "`r`n" } else { "`n" }})
 }
