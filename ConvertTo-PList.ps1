@@ -55,7 +55,7 @@ function ConvertTo-PList
     [ValidateRange(0,1000)]
     [uint32]$FormatDataWrapMaxLength = 44,
 
-    [switch]$FormatDataIndentWrapped
+    [switch]$FormatDataWrappedNoIndent
 ) {
     # write out a PList document based on the property list supplied
     # $PropertyList is an object containing the entire property list tree.  Hash tables are supported.
@@ -129,7 +129,7 @@ function ConvertTo-PList
                 "$indention<data>$itemData</data>"    
             } else {
                 "$indention<data>"
-                $DataWrapperRegex.Matches($itemData).Value.ForEach({ "$indention$(if ($FormatDataIndentWrapped) { $Indent })$_" })
+                $DataWrapperRegex.Matches($itemData).Value.ForEach({ "$indention$(if (!$FormatDataWrappedNoIndent) { $Indent })$_" })
                 "$indention</data>"
             }
         } elseif ($level -le $Depth) {
