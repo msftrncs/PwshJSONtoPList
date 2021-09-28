@@ -15,6 +15,12 @@
     A switch causing the first level of objects to be indented as per normal XML practices.
 .PARAMETER EnumsAsStrings
     A switch that specifies an alternate serialization option that converts all enumerations to their string representations.
+.PARAMETER FormatDataInlineMaxLength
+    Maximum encoded <data> length for keeping value inline, if unspecified, all data will be nested and wrapped, if 0, all data will be inline.
+.PARAMETER FormatDataWrapMaxLength
+    Maximum ecnoded <data> length for each nested wrapped line once exceeding FormatDataInlineMaxLength, or 0 for all data to be on a single nested line.
+.PARAMETER FormatDataWrappedNoIndent
+    A switch to prevent the indenting of <data> content when nested/wrapped on separate lines.
 .EXAMPLE
     $grammar_json | ConvertTo-Plist -Indent `t -StateEncodingAs UTF-8 | Set-Content out\PowerShellSyntax.tmLanguage -Encoding UTF8
 .INPUTS
