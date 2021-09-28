@@ -125,7 +125,7 @@ function ConvertTo-PList
             # handle an array of bytes, encode as BASE64 string, write as DATA block
             # use REGEX to split out the string in to 44 character chunks properly indented
             $itemData = [convert]::ToBase64String($item)
-            if ($FormatDataInlineMaxLengthIsPresent -and ($FormatDataInlineMaxLength -eq 0 -or $itemData.Length -le $FormatDataInlineMaxLength)) {
+            if (!$itemData -or $FormatDataInlineMaxLengthIsPresent -and ($FormatDataInlineMaxLength -eq 0 -or $itemData.Length -le $FormatDataInlineMaxLength)) {
                 "$indention<data>$itemData</data>"    
             } else {
                 "$indention<data>"
@@ -135,7 +135,7 @@ function ConvertTo-PList
         } elseif ($level -le $Depth) {
             if ($item -is [array] -or $item -is [Collections.IList]) {
                 # handle arrays
-                if ($item) {
+                if (,$item) {
                     "$indention<array>"
                     # iterate through the items in the array
                     foreach ($subItem in $item) {
@@ -174,9 +174,6 @@ function ConvertTo-PList
         $FormatDataInlineMaxLengthIsPresent = $PSBoundParameters.ContainsKey('FormatDataInlineMaxLength')
         $DataWrapperRegex = [regex]".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
 
-        "DBG: $(($input)?.GetType()), $(($input)?.Length), $($input[0]?.GetType()), $($input[0]?.Length), $($input[0]?[0]?.GetType())"
-        "DBG: $(($PropertyList)?.GetType()), $(($PropertyList)?.Length), $(($PropertyList)?[0]?.GetType()), $(($PropertyList)?[0]?.Length), $(($PropertyList)?[0]?[0]?.GetType())"
-
         # write the PList Header
         '<?xml version="1.0"' + $(if ($StateEncodingAs) { ' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"' }) + '?>'
         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
@@ -184,24 +181,13 @@ function ConvertTo-PList
 
         # start writing the property list, the property list should be an object, and starts at base level
         writeObject $(
-                if ($null -eq $property -or $input -is [array] -and $input.Length -gt 0) {
-                    if ($input.Length -eq 1 -and $input[0] -is [array] -and ($input[0].Length -eq 0 -or $input[0].Length -eq 1 -and $input[0][0] -is [array])) {
-                        ,$input
-                    } else {
-                        $input
-                    }
+                # we need to determine where our input is coming from, pipeline or parameter argument.
+                if ($input -is [array] -and $input.Length -ne 0) {
+                    $input # input from pipeline
                 } else {
-                    if ($PropertyList -is [array] -and $PropertyList.Length -le 1) {
-                        if ($PropertyList.Length -eq 0 -or $PropertyList[0] -is [array] -and ($PropertyList[0].Length -eq 0 -or ($PropertyList[0].Length -eq 1 -and $PropertyList[0][0] -is [array]))) {
-                            ,@(,$PropertyList)
-                        } else {
-                            ,$PropertyList
-                        }
-                    } else {
-                        $PropertyList
-                    }
+                    $PropertyList # input from parameter argument
                 }
-            ) $(if ($IndentFirstItem.IsPresent) { $Indent } else { '' }) 0
+            ) $(if ($IndentFirstItem) { $Indent } else { '' }) 0
 
         # end the PList document
         '</plist>'
