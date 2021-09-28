@@ -174,13 +174,34 @@ function ConvertTo-PList
         $FormatDataInlineMaxLengthIsPresent = $PSBoundParameters.ContainsKey('FormatDataInlineMaxLength')
         $DataWrapperRegex = [regex]".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
 
+        "DBG: $(($input)?.GetType()), $(($input)?.Length), $($input[0]?.GetType()), $($input[0]?.Length), $($input[0]?[0]?.GetType())"
+        "DBG: $(($PropertyList)?.GetType()), $(($PropertyList)?.Length), $(($PropertyList)?[0]?.GetType()), $(($PropertyList)?[0]?.Length), $(($PropertyList)?[0]?[0]?.GetType())"
+
         # write the PList Header
         '<?xml version="1.0"' + $(if ($StateEncodingAs) { ' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"' }) + '?>'
         '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
         '<plist version="1.0">'
 
         # start writing the property list, the property list should be an object, and starts at base level
-        writeObject $PropertyList $(if ($IndentFirstItem.IsPresent) { $Indent } else { '' }) 0
+        writeObject $(
+                if ($null -eq $property -or $input -is [array] -and $input.Length -gt 0) {
+                    if ($input.Length -eq 1 -and $input[0] -is [array] -and ($input[0].Length -eq 0 -or $input[0].Length -eq 1 -and $input[0][0] -is [array])) {
+                        ,$input
+                    } else {
+                        $input
+                    }
+                } else {
+                    if ($PropertyList -is [array] -and $PropertyList.Length -le 1) {
+                        if ($PropertyList.Length -eq 0 -or $PropertyList[0] -is [array] -and ($PropertyList[0].Length -eq 0 -or ($PropertyList[0].Length -eq 1 -and $PropertyList[0][0] -is [array]))) {
+                            ,@(,$PropertyList)
+                        } else {
+                            ,$PropertyList
+                        }
+                    } else {
+                        $PropertyList
+                    }
+                }
+            ) $(if ($IndentFirstItem.IsPresent) { $Indent } else { '' }) 0
 
         # end the PList document
         '</plist>'
