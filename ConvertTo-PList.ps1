@@ -20,7 +20,7 @@
 .PARAMETER FormatDataInlineMaxLength
     Maximum encoded <data> length for keeping value inline, if unspecified, all data will be nested and wrapped, if 0, all data will be inline.
 .PARAMETER FormatDataWrapMaxLength
-    Maximum ecnoded <data> length for each nested wrapped line once exceeding FormatDataInlineMaxLength, or 0 for all data to be on a single nested line.
+    Maximum encoded <data> length for each nested wrapped line once exceeding FormatDataInlineMaxLength, or 0 for all data to be on a single nested line.
 .PARAMETER FormatDataWrappedNoIndent
     A switch to prevent the indenting of <data> content when nested/wrapped on separate lines.
 .EXAMPLE
