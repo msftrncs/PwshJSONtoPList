@@ -153,7 +153,7 @@ function ConvertTo-PList
         } elseif ($level -le $Depth) {
             if ($item -is [array] -or $item -is [Collections.IList]) {
                 # handle arrays
-                if (,$item) {
+                if (, $item) {
                     "$indention<array>"
                     # iterate through the items in the array
                     foreach ($subItem in $item) {
@@ -163,11 +163,11 @@ function ConvertTo-PList
                 } else {
                     "$indention<array/>" # empty object
                 }
-            } elseif ($item -and $(if($item -is [Collections.IDictionary]) { $item.get_Keys().Count } else { @($item.psobject.get_Properties()).Count} ) -gt 0) {
+            } elseif ($item -and $(if ($item -is [Collections.IDictionary]) { $item.get_Keys().Count } else { @($item.psobject.get_Properties()).Count } ) -gt 0) {
                 # handle objects by recursing with writeProperty
                 "$indention<dict>"
                 # iterate through the items
-                if ($item-is [Collections.IDictionary]) {
+                if ($item -is [Collections.IDictionary]) {
                     # process what we assume is a hashtable object
                     foreach ($key in $item.Keys) {
                         writeProperty $key $item[$key]
@@ -189,30 +189,30 @@ function ConvertTo-PList
     }
 
     $(
-        if (!$Compress) {
-            $FormatDataInlineMaxLengthIsPresent = $PSBoundParameters.ContainsKey('FormatDataInlineMaxLength')
-            $DataWrapperRegex = [regex]".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
-        } else {
-            # remove any indention due to compression.
-            $Indent = '';
-        }
+            if (!$Compress) {
+                $FormatDataInlineMaxLengthIsPresent = $PSBoundParameters.ContainsKey('FormatDataInlineMaxLength')
+                $DataWrapperRegex = [regex]".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
+            } else {
+                # remove any indention due to compression.
+                $Indent = '';
+            }
 
-        # write the PList Header
-        '<?xml version="1.0"' + $(if ($StateEncodingAs) { ' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"' }) + '?>'
-        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
-        '<plist version="1.0">'
+            # write the PList Header
+            '<?xml version="1.0"' + $(if ($StateEncodingAs) { ' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"' }) + '?>'
+            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
+            '<plist version="1.0">'
 
-        # start writing the property list, the property list should be an object, and starts at base level
-        writeObject $(
-                # we need to determine where our input is coming from, pipeline or parameter argument.
-                if ($input -is [array] -and $input.Length -ne 0) {
-                    $input # input from pipeline
-                } else {
-                    $PropertyList # input from parameter argument
-                }
-            ) $(if ($IndentFirstItem) { $Indent } else { '' }) 0
+            # start writing the property list, the property list should be an object, and starts at base level
+            writeObject $(
+                    # we need to determine where our input is coming from, pipeline or parameter argument.
+                    if ($input -is [array] -and $input.Length -ne 0) {
+                        $input # input from pipeline
+                    } else {
+                        $PropertyList # input from parameter argument
+                    }
+                ) $(if ($IndentFirstItem) { $Indent } else { '' }) 0
 
-        # end the PList document
-        '</plist>'
-    ) -join $(if ($Compress) {''} else {if (-not $IsCoreCLR -or $IsWindows) { "`r`n" } else { "`n" }})
+            # end the PList document
+            '</plist>'
+        ) -join $(if ($Compress) {''} else {if (-not $IsCoreCLR -or $IsWindows) { "`r`n" } else { "`n" }})
 }
