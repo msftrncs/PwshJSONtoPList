@@ -103,12 +103,7 @@ function ConvertTo-PList
             # write a dictionary key and its value
 
             # write out key name, if one was supplied
-            if ($name) {
-                "$indention$Indent<key>$($name | writeXMLcontent)</key>"
-            } else {
-                # no key name was supplied
-                "$indention$Indent<key/>"
-            }
+            "$indention$Indent<key$(if ($name) { ">$($name | writeXMLcontent)</key>" } else { '/>' })"
             # write the property value, which could be an object
             writeObject $item $indention$Indent ($level + 1)
         }
