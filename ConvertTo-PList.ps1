@@ -116,19 +116,17 @@ function ConvertTo-PList
         if (($item -is [string]) -or ($item -is [char]) -or ($EnumsAsStrings -and $item -is [enum])) {
             # handle strings, characters, or enums
             "$indention<string>$($item | writeXMLcontent)</string>"
-        } elseif ($item -is [boolean]) {
-            # handle boolean type
-            "$indention$(
-                if ($item) {
-                    "<true/>"
-                } else {
-                    "<false/>"
-                }
-            )"
         } elseif ($item -is [ValueType]) {
-            # handle numeric types
+            # handle other simple types
             "$indention$(
-                if (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
+                if ($item -is [boolean]) {
+                    # handle boolean type
+                    if ($item) {
+                        "<true/>"
+                    } else {
+                        "<false/>"
+                    }
+                } elseif (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
                     # floating point or decimal numeric types
                     "<real>$item</real>"
                 } elseif ($item -is [datetime]) {
@@ -143,7 +141,7 @@ function ConvertTo-PList
             # handle an array of bytes, encode as BASE64 string, write as DATA block
             # use REGEX to split out the string in to 44 character chunks properly indented
             $itemData = [convert]::ToBase64String($item)
-            if (!$itemData -or $Compress -or $FormatDataInlineMaxLengthIsPresent -and ($FormatDataInlineMaxLength -eq 0 -or $itemData.Length -le $FormatDataInlineMaxLength)) {
+            if (-not $itemData -or $Compress -or $FormatDataInlineMaxLengthIsPresent -and ($FormatDataInlineMaxLength -eq 0 -or $itemData.Length -le $FormatDataInlineMaxLength)) {
                 "$indention<data>$itemData</data>"    
             } else {
                 "$indention<data>"
@@ -151,9 +149,9 @@ function ConvertTo-PList
                 "$indention</data>"
             }
         } elseif ($level -le $Depth) {
-            if ($item -is [array] -or $item -is [Collections.IList]) {
+            if ($item -is [Collections.IList]) {
                 # handle arrays
-                if (, $item) {
+                if ($item.Count -ne 0) {
                     "$indention<array>"
                     # iterate through the items in the array
                     foreach ($subItem in $item) {
@@ -163,13 +161,13 @@ function ConvertTo-PList
                 } else {
                     "$indention<array/>" # empty object
                 }
-            } elseif ($item -and $(if ($item -is [Collections.IDictionary]) { $item.get_Keys().Count } else { @($item.psobject.get_Properties()).Count } ) -gt 0) {
+            } elseif ($item -and $(if ($item -is [Collections.IDictionary]) { $item.get_Keys().Count } else { @($item.psobject.get_Properties()).Length } ) -gt 0) {
                 # handle objects by recursing with writeProperty
                 "$indention<dict>"
                 # iterate through the items
                 if ($item -is [Collections.IDictionary]) {
                     # process what we assume is a hashtable object
-                    foreach ($key in $item.Keys) {
+                    foreach ($key in $item.get_Keys()) {
                         writeProperty $key $item[$key]
                     }
                 } else {
@@ -198,7 +196,7 @@ function ConvertTo-PList
             }
 
             # write the PList Header
-            '<?xml version="1.0"' + $(if ($StateEncodingAs) { ' encoding="' + ($StateEncodingAs | writeXMLvalue) + '"' }) + '?>'
+            '<?xml version="1.0"' + $(if ($StateEncodingAs) { " encoding=""$($StateEncodingAs | writeXMLvalue)""" }) + '?>'
             '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
             '<plist version="1.0">'
 
@@ -214,5 +212,5 @@ function ConvertTo-PList
 
             # end the PList document
             '</plist>'
-        ) -join $(if ($Compress) {''} else {if (-not $IsCoreCLR -or $IsWindows) { "`r`n" } else { "`n" }})
+        ) -join $(if (-not $Compress) { "$(if (-not $IsCoreCLR -or $IsWindows) { "`r" })`n" })
 }
