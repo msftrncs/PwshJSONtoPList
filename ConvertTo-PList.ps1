@@ -45,35 +45,35 @@ function ConvertTo-PList
     [AllowEmptyCollection()]
     [AllowNull()]
     [AllowEmptyString()]
-    [object]$PropertyList,
+    [object] $PropertyList,
 
     [Parameter(ParameterSetName = "Indent")]
     [PSDefaultValue(Help = 'Tab')]
-    [string]$Indent = "`t",
+    [string] $Indent = "`t",
 
 #    [Parameter(Mandatory,ParameterSetName = "Compress")]
-    [switch]$Compress,
+    [switch] $Compress,
 
-    [string]$StateEncodingAs = 'UTF-8',
+    [string] $StateEncodingAs = 'UTF-8',
 
     [ValidateRange(1, 100)]
-    [int32]$Depth = 2,
+    [int] $Depth = 2,
 
     [Parameter(ParameterSetName = "Indent")]
-    [switch]$IndentFirstItem,
+    [switch] $IndentFirstItem,
 
-    [switch]$EnumsAsStrings,
-
-    [Parameter(ParameterSetName = "Indent")]
-    [ValidateRange(0,1000)]
-    [uint32]$FormatDataInlineMaxLength,
+    [switch] $EnumsAsStrings,
 
     [Parameter(ParameterSetName = "Indent")]
     [ValidateRange(0,1000)]
-    [uint32]$FormatDataWrapMaxLength = 44,
+    [uint32] $FormatDataInlineMaxLength,
 
     [Parameter(ParameterSetName = "Indent")]
-    [switch]$FormatDataWrappedNoIndent
+    [ValidateRange(0,1000)]
+    [uint32] $FormatDataWrapMaxLength = 44,
+
+    [Parameter(ParameterSetName = "Indent")]
+    [switch] $FormatDataWrappedNoIndent
 ) {
     # write out a PList document based on the property list supplied
     # $PropertyList is an object containing the entire property list tree.  Hash tables are supported.
@@ -90,67 +90,68 @@ function ConvertTo-PList
     }
 
     filter writeXMLvalue {
-        # write an escaped XML value, the only characters requiring escape in XML attribute values
-        # are &lt; and &amp; and &quo, but we'll escape &gt; as well for good habit.
+        # write an escaped XML attribute value, the only characters requiring escape in XML attribute 
+        # values are &lt; and &amp; and &quo, but we'll escape &gt; as well for good habit.
         # the purpose of making this a function, is a single place to change the escaping function used
-        ($_ | writeXMLcontent) -replace '"', '&quot;'
+        """$(($_ | writeXMLcontent) -replace '"', '&quot;')"""
     }
 
-    function writeObject ($item, [string]$indention, [int32]$level) {
+    function writeObject ($item, [string] $indention) {
         # write a property object
 
-        function writeProperty ([string]$name, $item) {
+        function writeProperty ([string] $name, $item) {
             # write a dictionary key and its value
 
             # write out key name, if one was supplied
             "$indention$Indent<key$(if ($name) { ">$($name | writeXMLcontent)</key>" } else { '/>' })"
             # write the property value, which could be an object
-            writeObject $item $indention$Indent ($level + 1)
+            writeObject $item $indention$Indent
         }
 
-        if (($item -is [string]) -or ($item -is [char]) -or ($EnumsAsStrings -and $item -is [enum])) {
-            # handle strings, characters, or enums
-            "$indention<string>$($item | writeXMLcontent)</string>"
-        } elseif ($item -is [ValueType]) {
-            # handle other simple types
-            "$indention$(
-                if ($item -is [boolean]) {
-                    # handle boolean type
-                    if ($item) {
-                        "<true/>"
-                    } else {
-                        "<false/>"
-                    }
-                } elseif (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
-                    # floating point or decimal numeric types
-                    "<real>$item</real>"
-                } elseif ($item -is [datetime]) {
-                    # date and time numeric type
-                    "<date>$($item.ToString('o') | writeXMLcontent)</date>"
-                } else {
-                    # interger numeric types
-                    "<integer>$(if ($item -isnot [enum]) { $item } else { $item.value__ })</integer>"
-                }
-            )"
-        } elseif ($item -is [byte[]]) {
+        if ($item -is [byte[]]) {
             # handle an array of bytes, encode as BASE64 string, write as DATA block
             # use REGEX to split out the string in to 44 character chunks properly indented
             $itemData = [convert]::ToBase64String($item)
-            if (-not $itemData -or $Compress -or $FormatDataInlineMaxLengthIsPresent -and ($FormatDataInlineMaxLength -eq 0 -or $itemData.Length -le $FormatDataInlineMaxLength)) {
+            if (-not $itemData -or $Compress -or $FormatDataInlineMaxLengthIsPresent -and (($FormatDataInlineMaxLength -eq 0) -or ($itemData.Length -le $FormatDataInlineMaxLength))) {
                 "$indention<data>$itemData</data>"    
             } else {
                 "$indention<data>"
-                $DataWrapperRegex.Matches($itemData).Value.ForEach({ "$indention$(if (!$FormatDataWrappedNoIndent) { $Indent })$_" })
+                $DataWrapperRegex.Matches($itemData).Value.ForEach({ "$indention$(if (-not $FormatDataWrappedNoIndent) { $Indent })$_" })
                 "$indention</data>"
             }
-        } elseif ($level -le $Depth) {
+        } elseif (($level -gt $Depth) -or ($item -is [valuetype]) -or ($item -is [string])) {
+            # handle simple types, or objects exceeding depth limit
+            "$indention$(
+                    if (($item -isnot [valuetype]) -or ($item -is [char]) -or ($EnumsAsStrings -and ($item -is [enum]))) {
+                        # handle strings, characters, or enums as strings, or objects exceeding depth limit
+                        "<string>$("$item" | writeXMLcontent)</string>"
+                    } elseif ($item -is [boolean]) {
+                        # handle boolean type
+                        if ($item) {
+                            "<true/>"
+                        } else {
+                            "<false/>"
+                        }
+                    } elseif (($item -is [single]) -or ($item -is [double]) -or ($item -is [decimal])) {
+                        # floating point or decimal numeric types
+                        "<real>$item</real>"
+                    } elseif ($item -is [datetime]) {
+                        # date and time numeric type
+                        "<date>$($item.ToString('o') | writeXMLcontent)</date>"
+                    } else {
+                        # interger numeric types
+                        "<integer>$(if ($item -isnot [enum]) { $item } else { $item.value__ })</integer>"
+                    }
+                )"
+        } else {
+            ++$level
             if ($item -is [Collections.IList]) {
                 # handle arrays
                 if ($item.Count -ne 0) {
                     "$indention<array>"
                     # iterate through the items in the array
                     foreach ($subItem in $item) {
-                        writeObject $subItem $indention$Indent ($level + 1)
+                        writeObject $subItem $indention$Indent
                     }
                     "$indention</array>"
                 } else {
@@ -175,23 +176,21 @@ function ConvertTo-PList
             } else {
                 "$indention<dict/>" # empty object
             }
-        } else {
-            # object has reached maximum depth, cast it out as a string
-            writeObject "$item" $indention $level
         }
     }
 
+    [int] $level = 0
     $(
             if (!$Compress) {
                 $FormatDataInlineMaxLengthIsPresent = $PSBoundParameters.ContainsKey('FormatDataInlineMaxLength')
-                $DataWrapperRegex = [regex]".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
+                [regex] $DataWrapperRegex = ".{1,$(if ($FormatDataWrapMaxLength -gt 0) {$FormatDataWrapMaxLength})}"
             } else {
                 # remove any indention due to compression.
                 $Indent = '';
             }
 
             # write the PList Header
-            '<?xml version="1.0"' + $(if ($StateEncodingAs) { " encoding=""$($StateEncodingAs | writeXMLvalue)""" }) + '?>'
+            "<?xml version=""1.0""$(if ($StateEncodingAs) { " encoding=$($StateEncodingAs | writeXMLvalue)" })?>"
             '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">'
             '<plist version="1.0">'
 
@@ -203,7 +202,7 @@ function ConvertTo-PList
                     } else {
                         $PropertyList # input from parameter argument
                     }
-                ) $(if ($IndentFirstItem) { $Indent } else { '' }) 0
+                ) "$(if ($IndentFirstItem) { $Indent })"
 
             # end the PList document
             '</plist>'
